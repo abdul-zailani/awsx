@@ -81,8 +81,20 @@ enum Commands {
 fn cmd_init() {
     let profiles = aws::list_profiles();
     let kube_contexts = kube::list_contexts();
+    let cluster_map = kube::get_context_clusters();
     let mut config = config::load_config();
     let mut count = 0;
+
+    // Build account_id → [kubectl_context] lookup from kubeconfig cluster ARNs
+    let mut account_to_kube: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    for (ctx_name, cluster) in &cluster_map {
+        // EKS ARN format: arn:aws:eks:<region>:<account_id>:cluster/<name>
+        if let Some(account_id) = cluster.split(':').nth(4) {
+            if !account_id.is_empty() {
+                account_to_kube.entry(account_id.to_string()).or_default().push(ctx_name.clone());
+            }
+        }
+    }
 
     println!("{}", "Scanning AWS profiles and kubectl contexts...".dimmed());
     println!();
@@ -109,7 +121,18 @@ fn cmd_init() {
         }
 
         // Try to find matching kubectl context
-        let kube_match = find_kube_match(profile, &kube_contexts);
+        // 1. Match by AWS account ID → EKS cluster ARN in kubeconfig
+        // 2. Fallback to token-based name scoring
+        let account_id = aws::get_profile_account_id(profile);
+        let kube_match = if let Some(ref aid) = account_id {
+            if let Some(candidates) = account_to_kube.get(aid) {
+                find_kube_match(profile, candidates)
+            } else {
+                find_kube_match(profile, &kube_contexts)
+            }
+        } else {
+            find_kube_match(profile, &kube_contexts)
+        };
 
         // Detect environment from name
         let environment = detect_environment(profile);
@@ -178,11 +201,7 @@ fn cmd_init() {
 }
 
 fn normalize_name(name: &str) -> String {
-    let mut s = name.to_lowercase();
-    for prefix in &["lion-", "aws-", "eks-", "k8s-", "cluster-"] {
-        s = s.strip_prefix(prefix).unwrap_or(&s).to_string();
-    }
-    s.replace('_', "-")
+    name.to_lowercase().replace('_', "-")
 }
 
 fn tokenize(name: &str) -> Vec<&str> {

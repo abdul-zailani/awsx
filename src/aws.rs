@@ -77,6 +77,20 @@ pub fn get_profile_region(profile: &str) -> Option<String> {
     }
 }
 
+/// Read sso_account_id from aws config for a profile
+pub fn get_profile_account_id(profile: &str) -> Option<String> {
+    let output = Command::new("aws")
+        .args(["configure", "get", "sso_account_id", "--profile", profile])
+        .output()
+        .ok()?;
+    if output.status.success() {
+        let id = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if id.is_empty() { None } else { Some(id) }
+    } else {
+        None
+    }
+}
+
 /// Output shell-eval commands to export AWS env vars
 pub fn export_commands(profile: &str, region: Option<&str>) -> Vec<String> {
     let mut cmds = vec![format!("export AWS_PROFILE={profile}")];
