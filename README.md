@@ -152,6 +152,14 @@ environment = "staging"
 
 This file is local to each engineer — context names and kubectl context names can differ between machines.
 
+## Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/abdul-zailani/awsx/main/uninstall.sh | sh
+```
+
+Removes binary, config (`~/.config/awsx/`), and shell hooks from rc files.
+
 ## Requirements
 
 - AWS CLI v2
