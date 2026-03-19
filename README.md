@@ -17,41 +17,35 @@ Built for DevOps/SRE engineers managing multiple AWS accounts and EKS clusters.
 
 ## Install
 
+### One-liner (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/abdul-zailani/awsx/main/install.sh | sh
+```
+
+This will:
+- Detect your OS and architecture (macOS/Linux, x86_64/arm64)
+- Download the latest release binary (or build from source if no release available)
+- Install to `/usr/local/bin`
+- Auto-add shell hook to your `.zshrc`, `.bashrc`, or `config.fish`
+
 ### From source
 
 ```bash
 cargo install --git https://github.com/abdul-zailani/awsx
 ```
 
-### From releases
+### Manual shell setup (if not using the installer)
 
 ```bash
-# macOS (Apple Silicon)
-curl -L https://github.com/abdul-zailani/awsx/releases/latest/download/awsx-aarch64-apple-darwin -o /usr/local/bin/awsx
-chmod +x /usr/local/bin/awsx
+# zsh
+echo 'eval "$(awsx shell-hook zsh --prompt)"' >> ~/.zshrc
 
-# macOS (Intel)
-curl -L https://github.com/abdul-zailani/awsx/releases/latest/download/awsx-x86_64-apple-darwin -o /usr/local/bin/awsx
-chmod +x /usr/local/bin/awsx
+# bash
+echo 'eval "$(awsx shell-hook bash --prompt)"' >> ~/.bashrc
 
-# Linux
-curl -L https://github.com/abdul-zailani/awsx/releases/latest/download/awsx-x86_64-unknown-linux-gnu -o /usr/local/bin/awsx
-chmod +x /usr/local/bin/awsx
-```
-
-## Shell Setup
-
-Add to your `~/.zshrc` (or `~/.bashrc`):
-
-```bash
-eval "$($HOME/.cargo/bin/awsx shell-hook zsh --prompt)"
-```
-
-For bash or fish:
-
-```bash
-eval "$($HOME/.cargo/bin/awsx shell-hook bash --prompt)"  # bash
-$HOME/.cargo/bin/awsx shell-hook fish --prompt | source    # fish
+# fish
+echo 'awsx shell-hook fish --prompt | source' >> ~/.config/fish/config.fish
 ```
 
 ## Quick Start
