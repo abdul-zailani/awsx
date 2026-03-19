@@ -177,34 +177,63 @@ fn cmd_init() {
     }
 }
 
+fn normalize_name(name: &str) -> String {
+    let mut s = name.to_lowercase();
+    for prefix in &["lion-", "aws-", "eks-", "k8s-", "cluster-"] {
+        s = s.strip_prefix(prefix).unwrap_or(&s).to_string();
+    }
+    s.replace('_', "-")
+}
+
+fn tokenize(name: &str) -> Vec<&str> {
+    name.split(|c: char| c == '-' || c == '_' || c == '.').filter(|s| !s.is_empty()).collect()
+}
+
+fn match_score(profile: &str, kube_ctx: &str) -> u32 {
+    let pn = normalize_name(profile);
+    let kn = normalize_name(kube_ctx);
+
+    // Exact after normalization = perfect
+    if pn == kn { return 100; }
+
+    let p_tokens = tokenize(&pn);
+    let k_tokens = tokenize(&kn);
+
+    if p_tokens.is_empty() || k_tokens.is_empty() { return 0; }
+
+    let matched: usize = p_tokens.iter().filter(|t| k_tokens.contains(t)).count();
+    let total = p_tokens.len().max(k_tokens.len());
+
+    // Score = percentage of tokens matched, but require ALL tokens of the shorter side to match
+    let shorter = p_tokens.len().min(k_tokens.len());
+    let shorter_matched = if p_tokens.len() <= k_tokens.len() {
+        p_tokens.iter().filter(|t| k_tokens.contains(t)).count()
+    } else {
+        k_tokens.iter().filter(|t| p_tokens.contains(t)).count()
+    };
+
+    // All tokens of shorter side must match
+    if shorter_matched < shorter { return 0; }
+
+    ((matched as f64 / total as f64) * 100.0) as u32
+}
+
 fn find_kube_match(profile: &str, kube_contexts: &[String]) -> Option<String> {
-    // Exact match
+    // Exact match first
     if kube_contexts.contains(&profile.to_string()) {
         return Some(profile.to_string());
     }
 
-    // Normalize: strip common prefixes like "lion-" and compare
-    let normalized = profile
-        .replace("lion-", "")
-        .replace("aws-", "")
-        .replace("_", "-");
-
+    let mut best: Option<(String, u32)> = None;
     for kctx in kube_contexts {
-        let k_normalized = kctx
-            .replace("lion-", "")
-            .replace("aws-", "")
-            .replace("_", "-");
-
-        if normalized == k_normalized {
-            return Some(kctx.clone());
-        }
-
-        // Partial: profile contains kube name or vice versa
-        if normalized.contains(&k_normalized) || k_normalized.contains(&normalized) {
-            return Some(kctx.clone());
+        let score = match_score(profile, kctx);
+        if score >= 60 {
+            if best.as_ref().map_or(true, |(_, s)| score > *s) {
+                best = Some((kctx.clone(), score));
+            }
         }
     }
-    None
+    best.map(|(ctx, _)| ctx)
 }
 
 fn detect_environment(name: &str) -> Option<String> {
