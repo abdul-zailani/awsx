@@ -26,11 +26,7 @@ for path in /usr/local/bin/awsx "$HOME/.cargo/bin/awsx"; do
 done
 
 # Remove config
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-case "$OS" in
-  darwin) CONFIG_DIR="$HOME/Library/Application Support/awsx" ;;
-  *)      CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/awsx" ;;
-esac
+CONFIG_DIR="$HOME/.config/awsx"
 
 if [ -d "$CONFIG_DIR" ]; then
   rm -rf "$CONFIG_DIR"

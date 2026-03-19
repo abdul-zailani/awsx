@@ -36,10 +36,8 @@ impl std::fmt::Display for Context {
 }
 
 pub fn config_path() -> PathBuf {
-    dirs::config_dir()
-        .unwrap_or_else(|| PathBuf::from("~/.config"))
-        .join("awsx")
-        .join("config.toml")
+    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+    home.join(".config").join("awsx").join("config.toml")
 }
 
 pub fn load_config() -> AppConfig {
