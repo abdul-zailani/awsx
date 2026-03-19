@@ -51,5 +51,9 @@ for rc in "$HOME/.zshrc" "$HOME/.zshrc.local" "$HOME/.bashrc" "$HOME/.config/fis
 done
 
 echo ""
-echo "  🗑️  awsx uninstalled. Restart your shell to complete."
+echo "  🗑️  awsx uninstalled."
+echo ""
+echo "  Run this to complete cleanup in your current shell:"
+echo ""
+echo "    unset -f awsx 2>/dev/null; exec \$SHELL"
 echo ""
