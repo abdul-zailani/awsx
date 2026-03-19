@@ -1,23 +1,30 @@
 pub fn shell_hook(shell: &str) {
+    let bin = std::env::current_exe()
+        .unwrap_or_else(|_| std::path::PathBuf::from("awsx"));
+    let bin = bin.display();
+
     let hook = match shell {
-        "zsh" | "bash" => r#"
-awsx() {
+        "zsh" | "bash" => format!(
+            r#"
+awsx() {{
     local output
-    output=$(command awsx "$@" 2>&1)
+    output=$({bin} "$@" 2>&1)
     local exit_code=$?
-    # Source any export lines, print the rest
     while IFS= read -r line; do
         case "$line" in
             export\ *) eval "$line" ;;
+            unset\ *) eval "$line" ;;
             *) echo "$line" ;;
         esac
     done <<< "$output"
     return $exit_code
-}
-"#,
-        "fish" => r#"
+}}
+"#
+        ),
+        "fish" => format!(
+            r#"
 function awsx
-    set -l output (command awsx $argv 2>&1)
+    set -l output ({bin} $argv 2>&1)
     set -l exit_code $status
     for line in $output
         if string match -q 'export *' -- $line
@@ -25,13 +32,17 @@ function awsx
             set -l key (string split '=' -- $var)[1]
             set -l val (string split '=' -- $var)[2]
             set -gx $key $val
+        else if string match -q 'unset *' -- $line
+            set -l var (string replace 'unset ' '' -- $line)
+            set -e $var
         else
             echo $line
         end
     end
     return $exit_code
 end
-"#,
+"#
+        ),
         _ => {
             eprintln!("Unsupported shell: {shell}. Use zsh, bash, or fish.");
             std::process::exit(1);

@@ -1,4 +1,5 @@
 use crate::config::{load_config, save_config, Context};
+use crate::{aws, kube};
 use colored::Colorize;
 
 pub fn save_context(
@@ -9,17 +10,37 @@ pub fn save_context(
     namespace: Option<String>,
     environment: Option<String>,
 ) {
+    // Auto-detect from current state if not specified
+    let aws_profile = aws_profile.or_else(|| std::env::var("AWS_PROFILE").ok());
+    let region = region.or_else(|| {
+        std::env::var("AWS_DEFAULT_REGION")
+            .or_else(|_| std::env::var("AWS_REGION"))
+            .ok()
+    });
+    let kube_context = kube_context.or_else(|| kube::current_context());
+
     let mut config = load_config();
     let ctx = Context {
-        aws_profile,
-        region,
-        kube_context,
+        aws_profile: aws_profile.clone(),
+        region: region.clone(),
+        kube_context: kube_context.clone(),
         namespace,
         environment,
     };
     config.contexts.insert(name.to_string(), ctx);
     save_config(&config).expect("failed to save config");
+
     println!("{} Context '{}' saved", "✓".green(), name.cyan());
+    if let Some(p) = &aws_profile {
+        println!("  AWS profile: {}", p.dimmed());
+    }
+    if let Some(r) = &region {
+        println!("  Region: {}", r.dimmed());
+    }
+    if let Some(k) = &kube_context {
+        let short = k.rsplit('/').next().unwrap_or(k);
+        println!("  K8s context: {}", short.dimmed());
+    }
 }
 
 pub fn delete_context(name: &str) {
