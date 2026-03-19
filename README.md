@@ -7,13 +7,14 @@ Built for DevOps/SRE engineers managing multiple AWS accounts and EKS clusters.
 ## Features
 
 - 🔀 **Unified switching** — AWS profile + kubectl context + region in one command
+- 🧠 **Auto-discovery** — `awsx init` scans your AWS profiles and kubeconfig, matches them automatically
 - 💾 **Saved contexts** — define environment combos, switch instantly
 - 🔍 **Fuzzy picker** — interactive selection powered by skim (Rust fzf)
 - 🔐 **Auto SSO login** — detects expired sessions, triggers `aws sso login`
-- 📸 **Auto-detect** — captures current AWS profile, region, and kubectl context automatically
+- 📸 **Auto-detect** — captures current AWS profile, region, and kubectl context on save
 - 🐚 **Shell integration** — eval-based env export for zsh/bash/fish
 - 🎨 **Color-coded** — environments tagged as PRD/STG/DEV with colors
-- ⚡ **Fast** — native Rust binary, sub-millisecond startup
+- ⚡ **Fast** — native Rust binary, ~6ms startup
 
 ## Install
 
@@ -26,55 +27,73 @@ curl -fsSL https://raw.githubusercontent.com/abdul-zailani/awsx/main/install.sh 
 This will:
 - Detect your OS and architecture (macOS/Linux, x86_64/arm64)
 - Download the latest release binary (or build from source if no release available)
-- Install to `/usr/local/bin`
 - Auto-add shell hook to your `.zshrc`, `.bashrc`, or `config.fish`
+- Run `awsx init` to auto-discover your environments
+
+After install, reload your shell:
+
+```bash
+source ~/.zshrc  # or ~/.bashrc
+awsx list        # see discovered contexts
+awsx use         # start switching
+```
 
 ### From source
 
 ```bash
 cargo install --git https://github.com/abdul-zailani/awsx
-```
-
-### Manual shell setup (if not using the installer)
-
-```bash
-# zsh
-echo 'eval "$(awsx shell-hook zsh --prompt)"' >> ~/.zshrc
-
-# bash
-echo 'eval "$(awsx shell-hook bash --prompt)"' >> ~/.bashrc
-
-# fish
-echo 'awsx shell-hook fish --prompt | source' >> ~/.config/fish/config.fish
+eval "$(awsx shell-hook zsh --prompt)"  # add to your rc file
+awsx init
 ```
 
 ## Quick Start
 
-Each engineer sets up contexts locally based on their own environment. No shared config needed.
+### Option 1: Auto-discover (recommended)
 
-### 1. Save contexts from current state (recommended)
+```bash
+awsx init
+```
+
+Scans your existing AWS profiles and kubectl contexts, then intelligently matches them:
+
+```
+Scanning AWS profiles and kubectl contexts...
+
+  5 AWS profiles found:
+    default, my-app-dev, my-app-stg, my-app-prd, data-platform
+  3 kubectl contexts found:
+    app-dev, app-stg, app-prd
+
+  ✓ default → aws=default | region=us-east-1
+  ✓ my-app-dev → aws=my-app-dev | k8s=app-dev
+  ✓ my-app-stg → aws=my-app-stg | k8s=app-stg
+  ✓ my-app-prd → aws=my-app-prd | k8s=app-prd
+  ✓ data-platform → aws=data-platform
+
+✓ 5 contexts saved.
+```
+
+**How matching works:**
+
+1. **Account ID matching** — reads `sso_account_id` or `role_arn` from your AWS config, matches to EKS cluster ARNs in kubeconfig
+2. **Token-based name scoring** — tokenizes names (splits by `-`, `_`, `.`), scores by overlap percentage
+3. **Unmatched entries** — AWS-only profiles and kubectl-only contexts are saved as standalone entries
+
+Works with any setup: AWS SSO, IAM assume-role, IAM access keys, EKS, GKE, self-hosted clusters, or kubectl-only environments.
+
+### Option 2: Save from current state
 
 Switch to your environment manually once, then let `awsx` capture it:
 
 ```bash
-# Switch to your staging environment
 export AWS_PROFILE=my-stg-profile
 kubectl config use-context my-stg-cluster
 
-# Save — awsx auto-detects current profile, region, and kubectl context
+# Save — auto-detects current profile, region, and kubectl context
 awsx save stg --environment staging
-# ✓ Context 'stg' saved
-#   AWS profile: my-stg-profile
-#   Region: ap-southeast-1
-#   K8s context: my-stg-cluster
-
-# Repeat for other environments
-export AWS_PROFILE=my-prd-profile
-kubectl config use-context my-prd-cluster
-awsx save prd --environment production
 ```
 
-### 2. Or save with explicit flags
+### Option 3: Save with explicit flags
 
 ```bash
 awsx save prd \
@@ -85,29 +104,21 @@ awsx save prd \
   --environment production
 ```
 
-### 3. Switch
+### Switch
 
 ```bash
-# Interactive picker
-awsx use
-
-# Direct switch
-awsx use prd
-
-# Show current status
-awsx current
-
-# List saved contexts
-awsx list
-#   dev  [DEV]  aws=my-dev-profile | region=ap-southeast-1 | k8s=my-dev-cluster | ns=default
-#   prd  [PRD]  aws=my-prd-profile | region=ap-southeast-1 | k8s=my-prd-cluster | ns=default
-#   stg  [STG]  aws=my-stg-profile | region=ap-southeast-1 | k8s=my-stg-cluster | ns=default
+awsx use          # interactive fuzzy picker
+awsx use prd      # direct switch
+awsx current      # show current status
+awsx list         # list saved contexts
+awsx clear        # unset all AWS env vars
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
+| `awsx init` | Auto-discover AWS profiles and kubectl contexts |
 | `awsx use [name]` | Switch to saved context (interactive if no name) |
 | `awsx profile [name]` | Switch AWS profile only |
 | `awsx kube [name]` | Switch kubectl context only |
@@ -118,21 +129,9 @@ awsx list
 | `awsx shell-hook <shell>` | Output shell hook (zsh/bash/fish) |
 | `awsx clear` | Unset all AWS environment variables |
 
-### Save flags
-
-All flags are optional — omitted values are auto-detected from current environment:
-
-| Flag | Description | Auto-detect source |
-|------|-------------|--------------------|
-| `--aws-profile` | AWS CLI profile name | `$AWS_PROFILE` |
-| `--region` | AWS region | `$AWS_DEFAULT_REGION` or `$AWS_REGION` |
-| `--kube-context` | kubectl context name | `kubectl config current-context` |
-| `--namespace` | Kubernetes namespace | — |
-| `--environment` | Environment tag (production/staging/development) | — |
-
 ## Config
 
-Contexts are stored locally per engineer in `~/.config/awsx/config.toml`:
+Contexts are stored per engineer in `~/.config/awsx/config.toml`:
 
 ```toml
 [contexts.prd]
@@ -141,16 +140,9 @@ region = "ap-southeast-1"
 kube_context = "my-prd-cluster"
 namespace = "default"
 environment = "production"
-
-[contexts.stg]
-aws_profile = "my-stg-profile"
-region = "ap-southeast-1"
-kube_context = "my-stg-cluster"
-namespace = "default"
-environment = "staging"
 ```
 
-This file is local to each engineer — context names and kubectl context names can differ between machines.
+This file is local — context names and mappings can differ between machines. Run `awsx init` on each machine to auto-generate.
 
 ## Uninstall
 
@@ -158,12 +150,10 @@ This file is local to each engineer — context names and kubectl context names 
 curl -fsSL https://raw.githubusercontent.com/abdul-zailani/awsx/main/uninstall.sh | sh
 ```
 
-Removes binary, config (`~/.config/awsx/`), and shell hooks from rc files.
-
 ## Requirements
 
-- AWS CLI v2
-- kubectl (optional, for k8s switching)
+- AWS CLI v2 (optional — works with kubectl-only setups)
+- kubectl (optional — works with AWS-only setups)
 
 ## License
 
