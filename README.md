@@ -152,8 +152,8 @@ curl -fsSL https://raw.githubusercontent.com/abdul-zailani/awsx/main/uninstall.s
 
 ## Requirements
 
-- AWS CLI v2 (optional — works with kubectl-only setups)
-- kubectl (optional — works with AWS-only setups)
+- AWS CLI v2
+- kubectl (optional, for Kubernetes context switching)
 
 ## License
 
