@@ -1,6 +1,19 @@
 # awsx
 
-**AWS Context Switcher** — switch AWS profile + kubectl context + region in one command.
+[![GitHub release](https://img.shields.io/github/v/release/abdul-zailani/awsx?style=flat-square)](https://github.com/abdul-zailani/awsx/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![Built with Rust](https://img.shields.io/badge/built%20with-Rust-orange?style=flat-square)](https://www.rust-lang.org/)
+
+**Stop running 3 commands every time you switch AWS environments.**
+
+`awsx` switches your AWS profile + kubectl context + region in one command. Zero config — it auto-discovers your existing setup.
+
+```bash
+$ awsx use prd
+✓ AWS profile: my-prd-profile (account: 123456789012)
+  Role: AdminRole
+✓ Kubernetes: prd-cluster
+```
 
 Built for DevOps/SRE engineers managing multiple AWS accounts and EKS clusters.
 
@@ -154,6 +167,16 @@ curl -fsSL https://raw.githubusercontent.com/abdul-zailani/awsx/main/uninstall.s
 
 - AWS CLI v2
 - kubectl (optional, for Kubernetes context switching)
+
+## Why awsx?
+
+| Tool | AWS profile | kubectl context | Region | Auto-discover | One binary |
+|------|:-----------:|:---------------:|:------:|:-------------:|:----------:|
+| **awsx** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| awsp | ✅ | ❌ | ❌ | ❌ | ❌ (shell) |
+| aws-vault | ✅ | ❌ | ❌ | ❌ | ✅ |
+| kubectx | ❌ | ✅ | ❌ | ❌ | ✅ |
+| awsume | ✅ | ❌ | ✅ | ❌ | ❌ (python) |
 
 ## License
 
