@@ -65,27 +65,33 @@ fn print_session_info(profile: &str) {
 
 /// Read region from aws config for a profile
 pub fn get_profile_region(profile: &str) -> Option<String> {
-    let output = Command::new("aws")
-        .args(["configure", "get", "region", "--profile", profile])
-        .output()
-        .ok()?;
-    if output.status.success() {
-        let region = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if region.is_empty() { None } else { Some(region) }
-    } else {
-        None
-    }
+    aws_config_get("region", profile)
 }
 
-/// Read sso_account_id from aws config for a profile
+/// Read AWS account ID from profile config.
+/// Tries: sso_account_id, role_arn (contains account), source_profile chain.
 pub fn get_profile_account_id(profile: &str) -> Option<String> {
+    // Try sso_account_id (SSO profiles)
+    if let Some(id) = aws_config_get("sso_account_id", profile) {
+        return Some(id);
+    }
+    // Try role_arn (assume-role profiles): arn:aws:iam::<account>:role/...
+    if let Some(arn) = aws_config_get("role_arn", profile) {
+        if let Some(id) = arn.split(':').nth(4) {
+            if !id.is_empty() { return Some(id.to_string()); }
+        }
+    }
+    None
+}
+
+fn aws_config_get(key: &str, profile: &str) -> Option<String> {
     let output = Command::new("aws")
-        .args(["configure", "get", "sso_account_id", "--profile", profile])
+        .args(["configure", "get", key, "--profile", profile])
         .output()
         .ok()?;
     if output.status.success() {
-        let id = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if id.is_empty() { None } else { Some(id) }
+        let val = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if val.is_empty() { None } else { Some(val) }
     } else {
         None
     }

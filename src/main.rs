@@ -126,7 +126,8 @@ fn cmd_init() {
         let account_id = aws::get_profile_account_id(profile);
         let kube_match = if let Some(ref aid) = account_id {
             if let Some(candidates) = account_to_kube.get(aid) {
-                find_kube_match(profile, candidates)
+                // Already narrowed by account — lower threshold
+                find_kube_match_threshold(profile, candidates, 30)
             } else {
                 find_kube_match(profile, &kube_contexts)
             }
@@ -238,15 +239,17 @@ fn match_score(profile: &str, kube_ctx: &str) -> u32 {
 }
 
 fn find_kube_match(profile: &str, kube_contexts: &[String]) -> Option<String> {
-    // Exact match first
+    find_kube_match_threshold(profile, kube_contexts, 50)
+}
+
+fn find_kube_match_threshold(profile: &str, kube_contexts: &[String], threshold: u32) -> Option<String> {
     if kube_contexts.contains(&profile.to_string()) {
         return Some(profile.to_string());
     }
-
     let mut best: Option<(String, u32)> = None;
     for kctx in kube_contexts {
         let score = match_score(profile, kctx);
-        if score >= 60 {
+        if score >= threshold {
             if best.as_ref().map_or(true, |(_, s)| score > *s) {
                 best = Some((kctx.clone(), score));
             }
