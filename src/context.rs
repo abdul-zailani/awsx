@@ -1,5 +1,5 @@
 use crate::config::{load_config, save_config, Context};
-use crate::{aws, kube};
+use crate::kube;
 use colored::Colorize;
 
 pub fn save_context(
