@@ -14,19 +14,11 @@ Before proposing any feature, ask:
 2. **Can this be done by composing existing tools?** If yes → reject. Let users pipe it themselves.
 3. **Without this, does the user need >1 manual command to switch?** If no → reject.
 
-## awsx IS
+## Scope
 
-- A context switcher
-- A saved-context manager
-- A shell environment setter
+**IS:** context switcher, saved-context manager, shell environment setter.
 
-## awsx IS NOT
-
-- An AWS CLI wrapper (no `awsx s3`, `awsx ec2`, `awsx lambda`)
-- A Kubernetes manager (no `awsx pods`, `awsx logs`, `awsx apply`)
-- An infrastructure tool (no `awsx deploy`, `awsx terraform`)
-- A credential manager (no `awsx rotate-keys`, `awsx vault`)
-- A monitoring tool (no `awsx status`, `awsx cost`, `awsx alerts`)
+**IS NOT:** AWS CLI wrapper, Kubernetes manager, infrastructure tool, credential manager, monitoring tool.
 
 ## Feature Decision Examples
 
@@ -41,22 +33,13 @@ Before proposing any feature, ask:
 | `awsx deploy` — deploy after switch | ❌ | Way out of scope |
 | `awsx assume-role` — manage IAM roles | ❌ | AWS CLI domain |
 
-## For AI Agents
-
-If you are an AI agent (Copilot, Cursor, Kiro, Claude, etc.) working on this codebase:
-
-- **Do not add features outside the scope above.** If a user asks for something that violates the philosophy, explain why and suggest an alternative (e.g., a shell alias or separate tool).
-- **Do not add dependencies unless absolutely necessary.** The binary is 2MB. Keep it small.
-- **Do not add abstractions preemptively.** No traits, no generics, no plugin systems "for future use."
-- **Config path is always `~/.config/awsx/config.toml`.** Do not use platform-specific directories.
-- **Shell hook must embed absolute binary path.** Never rely on PATH lookup.
-- **Matching logic must be generic.** No hardcoded company names, prefixes, or patterns.
-- **Test every change.** Run `cargo build --release` and verify with `awsx init` + `awsx list` before claiming done.
-
 ## Code Style
 
-- Minimal dependencies
-- No `unwrap()` on user input — handle errors gracefully
+- Minimal dependencies — binary is ~2MB, keep it small
+- No `unwrap()` on user input — handle errors gracefully, exit code 1
 - Colored output via `colored` crate
-- Exit code 1 on errors
 - Functions prefixed `cmd_` for CLI command handlers
+- Config path is always `~/.config/awsx/config.toml`
+- Shell hook must embed absolute binary path via `std::env::current_exe()`
+- Matching logic must be generic — no hardcoded company names or prefixes
+- Test every change: `cargo build --release`, verify with `awsx init` + `awsx list`
