@@ -17,6 +17,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Auto-discover AWS profiles and kubectl contexts, generate saved contexts
+    Init,
     /// Switch to a saved context (or pick interactively)
     Use {
         /// Context name
@@ -76,6 +78,148 @@ enum Commands {
     Clear,
 }
 
+fn cmd_init() {
+    let profiles = aws::list_profiles();
+    let kube_contexts = kube::list_contexts();
+    let mut config = config::load_config();
+    let mut count = 0;
+
+    println!("{}", "Scanning AWS profiles and kubectl contexts...".dimmed());
+    println!();
+
+    if !profiles.is_empty() {
+        println!("  {} AWS profiles found:", profiles.len().to_string().cyan());
+        for p in &profiles {
+            println!("    {}", p);
+        }
+    }
+    if !kube_contexts.is_empty() {
+        println!("  {} kubectl contexts found:", kube_contexts.len().to_string().cyan());
+        for k in &kube_contexts {
+            println!("    {}", k);
+        }
+    }
+    println!();
+
+    // Try to match AWS profiles with kubectl contexts by common name patterns
+    for profile in &profiles {
+        // Skip if context already exists
+        if config.contexts.contains_key(profile) {
+            continue;
+        }
+
+        // Try to find matching kubectl context
+        let kube_match = find_kube_match(profile, &kube_contexts);
+
+        // Detect environment from name
+        let environment = detect_environment(profile);
+
+        // Detect region from aws config
+        let region = aws::get_profile_region(profile);
+
+        let ctx = config::Context {
+            aws_profile: Some(profile.clone()),
+            region,
+            kube_context: kube_match.clone(),
+            namespace: None,
+            environment,
+        };
+
+        let display = format!("{}", ctx);
+        config.contexts.insert(profile.clone(), ctx);
+        count += 1;
+        println!(
+            "  {} {} → {}",
+            "✓".green(),
+            profile.cyan(),
+            display.dimmed()
+        );
+    }
+
+    // Add kubectl contexts that didn't match any AWS profile
+    for kctx in &kube_contexts {
+        let already_mapped = config.contexts.values().any(|c| {
+            c.kube_context.as_deref() == Some(kctx)
+        });
+        if already_mapped || config.contexts.contains_key(kctx) {
+            continue;
+        }
+
+        let environment = detect_environment(kctx);
+        let ctx = config::Context {
+            aws_profile: None,
+            region: None,
+            kube_context: Some(kctx.clone()),
+            namespace: None,
+            environment,
+        };
+        config.contexts.insert(kctx.clone(), ctx);
+        count += 1;
+        println!(
+            "  {} {} → {}",
+            "✓".green(),
+            kctx.cyan(),
+            "k8s only".dimmed()
+        );
+    }
+
+    if count == 0 {
+        println!("  No new contexts to add (all already configured).");
+    } else {
+        config::save_config(&config).expect("failed to save config");
+        println!();
+        println!(
+            "{} {} contexts saved. Run {} to see them.",
+            "✓".green(),
+            count,
+            "awsx list".cyan()
+        );
+    }
+}
+
+fn find_kube_match(profile: &str, kube_contexts: &[String]) -> Option<String> {
+    // Exact match
+    if kube_contexts.contains(&profile.to_string()) {
+        return Some(profile.to_string());
+    }
+
+    // Normalize: strip common prefixes like "lion-" and compare
+    let normalized = profile
+        .replace("lion-", "")
+        .replace("aws-", "")
+        .replace("_", "-");
+
+    for kctx in kube_contexts {
+        let k_normalized = kctx
+            .replace("lion-", "")
+            .replace("aws-", "")
+            .replace("_", "-");
+
+        if normalized == k_normalized {
+            return Some(kctx.clone());
+        }
+
+        // Partial: profile contains kube name or vice versa
+        if normalized.contains(&k_normalized) || k_normalized.contains(&normalized) {
+            return Some(kctx.clone());
+        }
+    }
+    None
+}
+
+fn detect_environment(name: &str) -> Option<String> {
+    let lower = name.to_lowercase();
+    if lower.contains("prd") || lower.contains("prod") {
+        Some("production".to_string())
+    } else if lower.contains("stg") || lower.contains("staging") {
+        Some("staging".to_string())
+    } else if lower.contains("dev") {
+        Some("development".to_string())
+    } else {
+        None
+    }
+}
+
 fn cmd_use(name: Option<String>) {
     let cfg = config::load_config();
     let ctx_name = match name {
@@ -83,7 +227,7 @@ fn cmd_use(name: Option<String>) {
         None => {
             let names: Vec<String> = cfg.contexts.keys().cloned().collect();
             if names.is_empty() {
-                eprintln!("No saved contexts. Use {} to create one.", "awsx save".cyan());
+                eprintln!("No saved contexts. Run {} to auto-discover.", "awsx init".cyan());
                 std::process::exit(1);
             }
             match interactive::pick(&names, "Context> ") {
@@ -100,10 +244,8 @@ fn cmd_use(name: Option<String>) {
         }
     };
 
-    // Export AWSX_CONTEXT for prompt
     println!("export AWSX_CONTEXT={ctx_name}");
 
-    // AWS
     if let Some(profile) = &ctx.aws_profile {
         for cmd in aws::export_commands(profile, ctx.region.as_deref()) {
             println!("{cmd}");
@@ -111,7 +253,6 @@ fn cmd_use(name: Option<String>) {
         aws::switch_profile(profile);
     }
 
-    // Kubernetes
     if let Some(kctx) = &ctx.kube_context {
         kube::switch_context(kctx, ctx.namespace.as_deref());
     }
@@ -157,7 +298,6 @@ fn cmd_kube(name: Option<String>, namespace: Option<String>) {
 }
 
 fn cmd_current() {
-    // AWS
     if let Ok(profile) = std::env::var("AWS_PROFILE") {
         print!("{} AWS: {}", "☁️".to_string(), profile.cyan());
         if let Ok(region) = std::env::var("AWS_DEFAULT_REGION") {
@@ -168,7 +308,6 @@ fn cmd_current() {
         println!("{} AWS: {}", "☁️".to_string(), "not set".dimmed());
     }
 
-    // K8s
     match kube::current_context() {
         Some(ctx) => {
             let short = ctx.rsplit('/').next().unwrap_or(&ctx);
@@ -177,7 +316,6 @@ fn cmd_current() {
         None => println!("{} K8s: {}", "☸".to_string(), "not set".dimmed()),
     }
 
-    // Context
     if let Ok(ctx) = std::env::var("AWSX_CONTEXT") {
         println!("{} Context: {}", "📌".to_string(), ctx.cyan().bold());
     }
@@ -193,6 +331,7 @@ fn cmd_clear() {
 fn main() {
     let cli = Cli::parse();
     match cli.command {
+        Some(Commands::Init) => cmd_init(),
         Some(Commands::Use { name }) => cmd_use(name),
         Some(Commands::Profile { name }) => cmd_profile(name),
         Some(Commands::Kube { name, namespace }) => cmd_kube(name, namespace),

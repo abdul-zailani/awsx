@@ -63,6 +63,20 @@ fn print_session_info(profile: &str) {
     }
 }
 
+/// Read region from aws config for a profile
+pub fn get_profile_region(profile: &str) -> Option<String> {
+    let output = Command::new("aws")
+        .args(["configure", "get", "region", "--profile", profile])
+        .output()
+        .ok()?;
+    if output.status.success() {
+        let region = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if region.is_empty() { None } else { Some(region) }
+    } else {
+        None
+    }
+}
+
 /// Output shell-eval commands to export AWS env vars
 pub fn export_commands(profile: &str, region: Option<&str>) -> Vec<String> {
     let mut cmds = vec![format!("export AWS_PROFILE={profile}")];

@@ -107,6 +107,14 @@ fi
 echo ""
 echo "🚀 Setup complete! Run: source ${RC}"
 echo ""
-echo "   awsx save prd --environment production   # save current env as context"
+echo "   awsx init                                 # auto-discover profiles & contexts"
 echo "   awsx use                                  # switch context (interactive)"
 echo "   awsx list                                 # list saved contexts"
+
+# Auto-init if aws or kubectl available
+if command -v aws >/dev/null 2>&1 || command -v kubectl >/dev/null 2>&1; then
+  echo ""
+  info "Running awsx init to discover existing profiles and contexts..."
+  echo ""
+  "$INSTALLED_PATH" init
+fi
