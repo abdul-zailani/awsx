@@ -1,6 +1,6 @@
 [package]
 name = "awsx"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "AWS Context Switcher — switch AWS profile + kubectl context + region in one command"
 license = "MIT"
