@@ -1,6 +1,6 @@
 [package]
-name = "awsx"
-version = "0.1.1"
+name = "aws-context-switcher"
+version = "0.1.0"
 edition = "2021"
 description = "AWS Context Switcher — switch AWS profile + kubectl context + region in one command"
 license = "MIT"
@@ -9,7 +9,7 @@ keywords = ["aws", "kubernetes", "cli", "devops", "context-switcher"]
 categories = ["command-line-utilities"]
 
 [lib]
-name = "awsx"
+name = "aws_context_switcher"
 path = "src/lib.rs"
 
 [dependencies]
