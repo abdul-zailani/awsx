@@ -35,19 +35,14 @@ esac
 TARGET="${TARGET_ARCH}-${TARGET_OS}"
 info "Detected platform: ${TARGET}"
 
-# Get latest release tag
-info "Fetching latest release..."
-if command -v curl >/dev/null 2>&1; then
-  LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"//;s/".*//')
-elif command -v wget >/dev/null 2>&1; then
-  LATEST=$(wget -qO- "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"//;s/".*//')
+# Try cargo install first (works on all platforms)
+if command -v cargo >/dev/null 2>&1; then
+  info "Installing via cargo install..."
+  cargo install aws-context-switcher
+  INSTALL_DIR="$HOME/.cargo/bin"
 else
-  fail "curl or wget required"
-fi
-
-if [ -z "$LATEST" ]; then
   # Fallback: build from source
-  info "No release found, building from source..."
+  info "Installing from source..."
   if ! command -v cargo >/dev/null 2>&1; then
     info "Installing Rust toolchain..."
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -55,31 +50,6 @@ if [ -z "$LATEST" ]; then
   fi
   cargo install --git "https://github.com/${REPO}"
   INSTALL_DIR="$HOME/.cargo/bin"
-else
-  info "Latest release: ${LATEST}"
-  URL="https://github.com/${REPO}/releases/download/${LATEST}/${BINARY}-${TARGET}"
-
-  # Download
-  TMPDIR=$(mktemp -d)
-  TMPFILE="${TMPDIR}/${BINARY}"
-  info "Downloading ${BINARY}-${TARGET}..."
-
-  if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$URL" -o "$TMPFILE" || fail "Download failed. Binary may not exist for ${TARGET}"
-  else
-    wget -q "$URL" -O "$TMPFILE" || fail "Download failed. Binary may not exist for ${TARGET}"
-  fi
-
-  chmod +x "$TMPFILE"
-
-  # Install
-  if [ -w "$INSTALL_DIR" ]; then
-    mv "$TMPFILE" "${INSTALL_DIR}/${BINARY}"
-  else
-    info "Need sudo to install to ${INSTALL_DIR}"
-    sudo mv "$TMPFILE" "${INSTALL_DIR}/${BINARY}"
-  fi
-  rm -rf "$TMPDIR"
 fi
 
 INSTALLED_PATH=$(command -v "$BINARY" 2>/dev/null || echo "${INSTALL_DIR}/${BINARY}")
