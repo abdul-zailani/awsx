@@ -36,6 +36,9 @@ impl std::fmt::Display for Context {
 }
 
 pub fn config_path() -> PathBuf {
+    if let Ok(path) = std::env::var("AWSX_CONFIG_PATH") {
+        return PathBuf::from(path);
+    }
     let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
     home.join(".config").join("awsx").join("config.toml")
 }

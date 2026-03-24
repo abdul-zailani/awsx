@@ -8,6 +8,10 @@ repository = "https://github.com/abdul-zailani/awsx"
 keywords = ["aws", "kubernetes", "cli", "devops", "context-switcher"]
 categories = ["command-line-utilities"]
 
+[lib]
+name = "awsx"
+path = "src/lib.rs"
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }

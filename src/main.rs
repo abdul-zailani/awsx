@@ -3,6 +3,7 @@ mod config;
 mod context;
 mod interactive;
 mod kube;
+mod matching;
 mod shell;
 
 use clap::{Parser, Subcommand};
@@ -127,16 +128,16 @@ fn cmd_init() {
         let kube_match = if let Some(ref aid) = account_id {
             if let Some(candidates) = account_to_kube.get(aid) {
                 // Already narrowed by account — lower threshold
-                find_kube_match_threshold(profile, candidates, 30)
+                matching::find_kube_match_threshold(profile, candidates, 30)
             } else {
-                find_kube_match(profile, &kube_contexts)
+                matching::find_kube_match(profile, &kube_contexts)
             }
         } else {
-            find_kube_match(profile, &kube_contexts)
+            matching::find_kube_match(profile, &kube_contexts)
         };
 
         // Detect environment from name
-        let environment = detect_environment(profile);
+        let environment = matching::detect_environment(profile);
 
         // Detect region from aws config
         let region = aws::get_profile_region(profile);
@@ -169,7 +170,7 @@ fn cmd_init() {
             continue;
         }
 
-        let environment = detect_environment(kctx);
+        let environment = matching::detect_environment(kctx);
         let ctx = config::Context {
             aws_profile: None,
             region: None,
@@ -198,76 +199,6 @@ fn cmd_init() {
             count,
             "awsx list".cyan()
         );
-    }
-}
-
-fn normalize_name(name: &str) -> String {
-    name.to_lowercase().replace('_', "-")
-}
-
-fn tokenize(name: &str) -> Vec<&str> {
-    name.split(|c: char| c == '-' || c == '_' || c == '.').filter(|s| !s.is_empty()).collect()
-}
-
-fn match_score(profile: &str, kube_ctx: &str) -> u32 {
-    let pn = normalize_name(profile);
-    let kn = normalize_name(kube_ctx);
-
-    // Exact after normalization = perfect
-    if pn == kn { return 100; }
-
-    let p_tokens = tokenize(&pn);
-    let k_tokens = tokenize(&kn);
-
-    if p_tokens.is_empty() || k_tokens.is_empty() { return 0; }
-
-    let matched: usize = p_tokens.iter().filter(|t| k_tokens.contains(t)).count();
-    let total = p_tokens.len().max(k_tokens.len());
-
-    // Score = percentage of tokens matched, but require ALL tokens of the shorter side to match
-    let shorter = p_tokens.len().min(k_tokens.len());
-    let shorter_matched = if p_tokens.len() <= k_tokens.len() {
-        p_tokens.iter().filter(|t| k_tokens.contains(t)).count()
-    } else {
-        k_tokens.iter().filter(|t| p_tokens.contains(t)).count()
-    };
-
-    // All tokens of shorter side must match
-    if shorter_matched < shorter { return 0; }
-
-    ((matched as f64 / total as f64) * 100.0) as u32
-}
-
-fn find_kube_match(profile: &str, kube_contexts: &[String]) -> Option<String> {
-    find_kube_match_threshold(profile, kube_contexts, 50)
-}
-
-fn find_kube_match_threshold(profile: &str, kube_contexts: &[String], threshold: u32) -> Option<String> {
-    if kube_contexts.contains(&profile.to_string()) {
-        return Some(profile.to_string());
-    }
-    let mut best: Option<(String, u32)> = None;
-    for kctx in kube_contexts {
-        let score = match_score(profile, kctx);
-        if score >= threshold {
-            if best.as_ref().map_or(true, |(_, s)| score > *s) {
-                best = Some((kctx.clone(), score));
-            }
-        }
-    }
-    best.map(|(ctx, _)| ctx)
-}
-
-fn detect_environment(name: &str) -> Option<String> {
-    let lower = name.to_lowercase();
-    if lower.contains("prd") || lower.contains("prod") {
-        Some("production".to_string())
-    } else if lower.contains("stg") || lower.contains("staging") {
-        Some("staging".to_string())
-    } else if lower.contains("dev") {
-        Some("development".to_string())
-    } else {
-        None
     }
 }
 
@@ -349,10 +280,29 @@ fn cmd_kube(name: Option<String>, namespace: Option<String>) {
 }
 
 fn cmd_current() {
-    if let Ok(profile) = std::env::var("AWS_PROFILE") {
-        print!("{} AWS: {}", "☁️".to_string(), profile.cyan());
-        if let Ok(region) = std::env::var("AWS_DEFAULT_REGION") {
-            print!(" ({})", region);
+    let config = config::load_config();
+    let ctx_name = std::env::var("AWSX_CONTEXT").ok();
+    let mut profile = std::env::var("AWS_PROFILE").ok();
+    let mut region = std::env::var("AWS_DEFAULT_REGION").ok().or_else(|| std::env::var("AWS_REGION").ok());
+
+    // Fallback to config if env vars not set
+    if profile.is_none() || region.is_none() {
+        if let Some(ref name) = ctx_name {
+            if let Some(ctx) = config.contexts.get(name) {
+                if profile.is_none() {
+                    profile = ctx.aws_profile.clone();
+                }
+                if region.is_none() {
+                    region = ctx.region.clone();
+                }
+            }
+        }
+    }
+
+    if let Some(p) = profile {
+        print!("{} AWS: {}", "☁️".to_string(), p.cyan());
+        if let Some(r) = region {
+            print!(" ({})", r);
         }
         println!();
     } else {
@@ -367,8 +317,8 @@ fn cmd_current() {
         None => println!("{} K8s: {}", "☸".to_string(), "not set".dimmed()),
     }
 
-    if let Ok(ctx) = std::env::var("AWSX_CONTEXT") {
-        println!("{} Context: {}", "📌".to_string(), ctx.cyan().bold());
+    if let Some(name) = ctx_name {
+        println!("{} Context: {}", "📌".to_string(), name.cyan().bold());
     }
 }
 

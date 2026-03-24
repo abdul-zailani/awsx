@@ -45,22 +45,17 @@ pub fn sso_login(profile: &str) -> bool {
 }
 
 pub fn switch_profile(profile: &str) {
-    if check_session(profile).is_some() {
-        print_session_info(profile);
+    let info = if let Some(info) = check_session(profile) {
+        info
     } else if sso_login(profile) {
-        print_session_info(profile);
+        check_session(profile).unwrap()
     } else {
         eprintln!("{} Failed to login to profile '{}'", "✗".red(), profile);
         std::process::exit(1);
-    }
-}
-
-fn print_session_info(profile: &str) {
-    if let Some(info) = check_session(profile) {
-        let role = info.arn.split('/').nth(1).unwrap_or(&info.arn);
-        println!("{} AWS profile: {} (account: {})", "✓".green(), profile.cyan(), info.account);
-        println!("  Role: {}", role.dimmed());
-    }
+    };
+    let role = info.arn.split('/').nth(1).unwrap_or(&info.arn);
+    eprintln!("{} AWS profile: {} (account: {})", "✓".green(), profile.cyan(), info.account);
+    eprintln!("  Role: {}", role.dimmed());
 }
 
 /// Read region from aws config for a profile

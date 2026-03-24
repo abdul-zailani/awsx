@@ -8,7 +8,7 @@ pub fn shell_hook(shell: &str) {
             r#"
 awsx() {{
     local output
-    output=$({bin} "$@" 2>&1)
+    output=$({bin} "$@" 2>/dev/null)
     local exit_code=$?
     while IFS= read -r line; do
         case "$line" in
@@ -24,7 +24,7 @@ awsx() {{
         "fish" => format!(
             r#"
 function awsx
-    set -l output ({bin} $argv 2>&1)
+    set -l output ({bin} $argv 2>/dev/null)
     set -l exit_code $status
     for line in $output
         if string match -q 'export *' -- $line
