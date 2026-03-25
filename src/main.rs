@@ -97,22 +97,22 @@ fn cmd_init() {
         }
     }
 
-    println!("{}", "Scanning AWS profiles and kubectl contexts...".dimmed());
-    println!();
+    eprintln!("{}", "Scanning AWS profiles and kubectl contexts...".dimmed());
+    eprintln!();
 
     if !profiles.is_empty() {
-        println!("  {} AWS profiles found:", profiles.len().to_string().cyan());
+        eprintln!("  {} AWS profiles found:", profiles.len().to_string().cyan());
         for p in &profiles {
-            println!("    {}", p);
+            eprintln!("    {}", p);
         }
     }
     if !kube_contexts.is_empty() {
-        println!("  {} kubectl contexts found:", kube_contexts.len().to_string().cyan());
+        eprintln!("  {} kubectl contexts found:", kube_contexts.len().to_string().cyan());
         for k in &kube_contexts {
-            println!("    {}", k);
+            eprintln!("    {}", k);
         }
     }
-    println!();
+    eprintln!();
 
     // Try to match AWS profiles with kubectl contexts by common name patterns
     for profile in &profiles {
@@ -153,7 +153,7 @@ fn cmd_init() {
         let display = format!("{}", ctx);
         config.contexts.insert(profile.clone(), ctx);
         count += 1;
-        println!(
+        eprintln!(
             "  {} {} → {}",
             "✓".green(),
             profile.cyan(),
@@ -180,7 +180,7 @@ fn cmd_init() {
         };
         config.contexts.insert(kctx.clone(), ctx);
         count += 1;
-        println!(
+        eprintln!(
             "  {} {} → {}",
             "✓".green(),
             kctx.cyan(),
@@ -189,11 +189,11 @@ fn cmd_init() {
     }
 
     if count == 0 {
-        println!("  No new contexts to add (all already configured).");
+        eprintln!("  No new contexts to add (all already configured).");
     } else {
         config::save_config(&config).expect("failed to save config");
-        println!();
-        println!(
+        eprintln!();
+        eprintln!(
             "{} {} contexts saved. Run {} to see them.",
             "✓".green(),
             count,
@@ -300,25 +300,25 @@ fn cmd_current() {
     }
 
     if let Some(p) = profile {
-        print!("{} AWS: {}", "☁️".to_string(), p.cyan());
+        eprint!("{} AWS: {}", "☁️".to_string(), p.cyan());
         if let Some(r) = region {
-            print!(" ({})", r);
+            eprint!(" ({})", r);
         }
-        println!();
+        eprintln!();
     } else {
-        println!("{} AWS: {}", "☁️".to_string(), "not set".dimmed());
+        eprintln!("{} AWS: {}", "☁️".to_string(), "not set".dimmed());
     }
 
     match kube::current_context() {
         Some(ctx) => {
             let short = ctx.rsplit('/').next().unwrap_or(&ctx);
-            println!("{} K8s: {}", "☸".to_string(), short.cyan());
+            eprintln!("{} K8s: {}", "☸".to_string(), short.cyan());
         }
-        None => println!("{} K8s: {}", "☸".to_string(), "not set".dimmed()),
+        None => eprintln!("{} K8s: {}", "☸".to_string(), "not set".dimmed()),
     }
 
     if let Some(name) = ctx_name {
-        println!("{} Context: {}", "📌".to_string(), name.cyan().bold());
+        eprintln!("{} Context: {}", "📌".to_string(), name.cyan().bold());
     }
 }
 
@@ -326,7 +326,7 @@ fn cmd_clear() {
     for var in ["AWS_PROFILE", "AWS_DEFAULT_REGION", "AWS_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWSX_CONTEXT"] {
         println!("unset {var}");
     }
-    println!("{} AWS environment cleared", "✓".green());
+    eprintln!("{} AWS environment cleared", "✓".green());
 }
 
 fn main() {

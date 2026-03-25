@@ -56,7 +56,7 @@ pub fn switch_context(context: &str, namespace: Option<&str>) {
     match status {
         Ok(o) if o.status.success() => {
             let short = context.rsplit('/').next().unwrap_or(context);
-            println!("{} Kubernetes: {}", "✓".green(), short.cyan());
+            eprintln!("{} Kubernetes: {}", "✓".green(), short.cyan());
         }
         _ => {
             eprintln!("{} Failed to switch kubectl context '{}'", "✗".red(), context);
@@ -67,6 +67,6 @@ pub fn switch_context(context: &str, namespace: Option<&str>) {
         let _ = Command::new("kubectl")
             .args(["config", "set-context", "--current", "--namespace", ns])
             .output();
-        println!("  Namespace: {}", ns.dimmed());
+        eprintln!("  Namespace: {}", ns.dimmed());
     }
 }

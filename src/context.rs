@@ -30,16 +30,16 @@ pub fn save_context(
     config.contexts.insert(name.to_string(), ctx);
     save_config(&config).expect("failed to save config");
 
-    println!("{} Context '{}' saved", "✓".green(), name.cyan());
+    eprintln!("{} Context '{}' saved", "✓".green(), name.cyan());
     if let Some(p) = &aws_profile {
-        println!("  AWS profile: {}", p.dimmed());
+        eprintln!("  AWS profile: {}", p.dimmed());
     }
     if let Some(r) = &region {
-        println!("  Region: {}", r.dimmed());
+        eprintln!("  Region: {}", r.dimmed());
     }
     if let Some(k) = &kube_context {
         let short = k.rsplit('/').next().unwrap_or(k);
-        println!("  K8s context: {}", short.dimmed());
+        eprintln!("  K8s context: {}", short.dimmed());
     }
 }
 
@@ -47,7 +47,7 @@ pub fn delete_context(name: &str) {
     let mut config = load_config();
     if config.contexts.remove(name).is_some() {
         save_config(&config).expect("failed to save config");
-        println!("{} Context '{}' deleted", "✓".green(), name);
+        eprintln!("{} Context '{}' deleted", "✓".green(), name);
     } else {
         eprintln!("{} Context '{}' not found", "✗".red(), name);
         std::process::exit(1);
@@ -57,7 +57,7 @@ pub fn delete_context(name: &str) {
 pub fn list_contexts() {
     let config = load_config();
     if config.contexts.is_empty() {
-        println!("No saved contexts. Use {} to create one.", "awsx save".cyan());
+        eprintln!("No saved contexts. Use {} to create one.", "awsx save".cyan());
         return;
     }
     let max_name = config.contexts.keys().map(|k| k.len()).max().unwrap_or(0);
@@ -69,6 +69,6 @@ pub fn list_contexts() {
             Some(e) => e.normal(),
             None => "---".dimmed(),
         };
-        println!("  {:<width$}  [{}]  {}", name.cyan(), env_tag, ctx, width = max_name);
+        eprintln!("  {:<width$}  [{}]  {}", name.cyan(), env_tag, ctx, width = max_name);
     }
 }

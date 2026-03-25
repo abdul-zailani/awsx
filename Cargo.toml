@@ -1,6 +1,6 @@
 [package]
 name = "aws-context-switcher"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "AWS Context Switcher — switch AWS profile + kubectl context + region in one command"
 license = "MIT"

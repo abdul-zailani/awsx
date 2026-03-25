@@ -36,7 +36,7 @@ pub fn check_session(profile: &str) -> Option<SessionInfo> {
 }
 
 pub fn sso_login(profile: &str) -> bool {
-    println!("{} Session expired, logging in...", "🔐".to_string());
+    eprintln!("{} Session expired, logging in...", "🔐".to_string());
     Command::new("aws")
         .args(["sso", "login", "--profile", profile])
         .status()
