@@ -5,6 +5,7 @@ edition = "2021"
 description = "AWS Context Switcher — switch AWS profile + kubectl context + region in one command"
 license = "MIT"
 repository = "https://github.com/abdul-zailani/awsx"
+documentation = "https://docs.rs/aws-context-switcher"
 keywords = ["aws", "kubernetes", "cli", "devops", "context-switcher"]
 categories = ["command-line-utilities"]
 
