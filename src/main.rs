@@ -314,7 +314,9 @@ fn cmd_current() {
             let short = ctx.rsplit('/').next().unwrap_or(&ctx);
             eprintln!("{} K8s: {}", "☸".to_string(), short.cyan());
         }
-        None => eprintln!("{} K8s: {}", "☸".to_string(), "not set".dimmed()),
+        None => {
+            eprintln!("{} K8s: {}", "☸".to_string(), "not set".dimmed());
+        }
     }
 
     if let Some(name) = ctx_name {
@@ -329,9 +331,11 @@ fn cmd_clear() {
     eprintln!("{} AWS environment cleared", "✓".green());
 }
 
+
+
 fn main() {
-    let cli = Cli::parse();
-    match cli.command {
+    let args = Cli::parse();
+    match args.command {
         Some(Commands::Init) => cmd_init(),
         Some(Commands::Use { name }) => cmd_use(name),
         Some(Commands::Profile { name }) => cmd_profile(name),

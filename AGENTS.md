@@ -1,22 +1,19 @@
-# awsx — AI Agent Guidelines
+# awsx — Workspace Guidelines
 
-awsx does ONE thing: **switch AWS profile + kubectl context + region in one command.** Do not expand this scope.
+This document defines the core architecture and boundaries for the `awsx` project. Both human contributors and AI assistants must strictly adhere to these rules.
 
-## Rules
+## Core Philosophy
+`awsx` does exactly ONE thing: **switch AWS profile + kubectl context + region in one single command.**
+Do not expand this scope. It is not an AWS CLI wrapper, nor a Kubernetes manager.
 
-1. **No features outside context switching.** No AWS CLI wrapping, no kubectl management, no deploy/infra tools.
-2. **Before adding a feature, ask:** Is this about switching context? Can existing tools do this? Without this, does the user need >1 command to switch? If any answer disqualifies it, reject.
-3. **No unnecessary dependencies.** Binary is ~2MB. Keep it small.
-4. **No preemptive abstractions.** No traits, generics, or plugin systems "for future use."
-5. **Config path is always `~/.config/awsx/config.toml`.** No platform-specific directories.
-6. **Shell hook must embed absolute binary path** via `std::env::current_exe()`. Never rely on PATH.
-7. **Matching logic must be generic.** No hardcoded company names or prefixes. Match by account ID first, then token-based name scoring.
-8. **Test every change.** `cargo build --release`, then verify with `awsx init` + `awsx list`.
-9. **Handle errors gracefully.** No `unwrap()` on user input. Exit code 1 on errors.
+## Technical Constraints
+1. **Scope strictness**: No features outside context switching. If a feature can be achieved by piping existing tools, it should be rejected.
+2. **Minimal footprint**: Keep dependencies to an absolute minimum. The binary must remain small and fast.
+3. **No preemptive abstractions**: Avoid unnecessary traits, generics, or plugin systems designed "for future use".
+4. **Configuration location**: Config path is strictly `~/.config/awsx/config.toml`. Do not use dynamic OS-specific config directories.
+5. **Shell integration**: Shell hooks must always evaluate absolute binary paths via `std::env::current_exe()`. Never rely on the user's `$PATH`.
+6. **Matching logic**: Context auto-discovery must be generic. Match by Account ID first, then token-based string scoring.
+7. **Error handling**: Handle errors gracefully. Exit code 1 on known failure states. Avoid `unwrap()` on runtime environments.
+8. **Testing standard**: Verify changes locally via `cargo build` and run standard flows (`awsx init`, `awsx list`) before committing.
 
-## Scope
-
-**IS:** context switcher, saved-context manager, shell environment setter.
-**IS NOT:** AWS CLI wrapper, k8s manager, infra tool, credential manager, monitoring tool.
-
-See CONTRIBUTING.md for full details and decision examples.
+*Please refer to `CONTRIBUTING.md` for feature decision examples.*
