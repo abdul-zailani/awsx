@@ -1,45 +1,29 @@
 # Contributing to awsx
 
+First off, thank you for considering contributing to `awsx`! It's people like you that make `awsx` such a great tool.
+
 ## Philosophy
 
-awsx does ONE thing: **switch AWS profile + kubectl context + region in one command.**
+`awsx` does exactly ONE thing: **switch AWS profile + kubectl context + region in one single command.**
 
-It was born from the frustration of running 3 separate commands every time you switch environments. That's the entire scope. Don't expand it.
+Before submitting a Pull Request, please ensure your feature aligns with our core [AGENTS.md](AGENTS.md) philosophy:
+- We don't wrap AWS CLI commands.
+- We keep the binary footprint minimal.
+- We rely on native `~/.aws/config` and `~/.kube/config` semantics.
 
-## The Rule
+## Development Setup
 
-Before proposing any feature, ask:
+1. Clone the repository.
+2. Ensure you have Rust installed (`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`).
+3. Build the project: `cargo build`
+4. Run tests (if applicable) and manually verify the binary using `cargo run -- <command>`.
 
-1. **Is this about switching context?** If no → reject.
-2. **Can this be done by composing existing tools?** If yes → reject. Let users pipe it themselves.
-3. **Without this, does the user need >1 manual command to switch?** If no → reject.
+## Submitting a Pull Request
 
-## Scope
+1. **Create a branch** for your feature or bug fix: `git checkout -b feat/my-new-feature` or `bug/fix-issue-1`.
+2. **Commit your changes**. Keep commit messages clear (e.g., `feat: added auto-discovery for GKE`).
+3. **Open a Pull Request** against the `main` branch. Provide a clear description of the problem and your solution.
 
-**IS:** context switcher, saved-context manager, shell environment setter.
+## Release Process (Maintainers)
 
-**IS NOT:** AWS CLI wrapper, Kubernetes manager, infrastructure tool, credential manager, monitoring tool.
-
-## Feature Decision Examples
-
-| Proposal | Verdict | Why |
-|----------|---------|-----|
-| `awsx edit` — edit saved context | ✅ | Context management |
-| `awsx export` — export contexts to share | ✅ | Context management |
-| `awsx init --interactive` — confirm matches | ✅ | Improves context setup |
-| `awsx status` — show pod status after switch | ❌ | kubectl domain |
-| `awsx cost` — show account cost | ❌ | Not switching |
-| `awsx tunnel` — port-forward after switch | ❌ | kubectl domain |
-| `awsx deploy` — deploy after switch | ❌ | Way out of scope |
-| `awsx assume-role` — manage IAM roles | ❌ | AWS CLI domain |
-
-## Code Style
-
-- Minimal dependencies — binary is ~2MB, keep it small
-- No `unwrap()` on user input — handle errors gracefully, exit code 1
-- Colored output via `colored` crate
-- Functions prefixed `cmd_` for CLI command handlers
-- Config path is always `~/.config/awsx/config.toml`
-- Shell hook must embed absolute binary path via `std::env::current_exe()`
-- Matching logic must be generic — no hardcoded company names or prefixes
-- Test every change: `cargo build --release`, verify with `awsx init` + `awsx list`
+Releases are managed using the local `.agents/workflows/publish-release.md` process.
