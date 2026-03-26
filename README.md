@@ -1,5 +1,6 @@
 # awsx
 
+[![Crates.io](https://img.shields.io/crates/v/aws-context-switcher.svg?style=flat-square)](https://crates.io/crates/aws-context-switcher)
 [![GitHub release](https://img.shields.io/github/v/release/abdul-zailani/awsx?style=flat-square)](https://github.com/abdul-zailani/awsx/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Built with Rust](https://img.shields.io/badge/built%20with-Rust-orange?style=flat-square)](https://www.rust-lang.org/)
@@ -51,7 +52,15 @@ awsx list        # see discovered contexts
 awsx use         # start switching
 ```
 
-### From source
+### With Cargo (crates.io)
+
+```bash
+cargo install aws-context-switcher
+eval "$(awsx shell-hook zsh --prompt)"  # add to your rc file
+awsx init
+```
+
+### From source (GitHub)
 
 ```bash
 cargo install --git https://github.com/abdul-zailani/awsx
